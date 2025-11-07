@@ -388,7 +388,7 @@ def prepare_data_from_tfds(data_path, is_rollout=False, batch_size=2):
         ds = ds.map(prepare_inputs)
         ds = ds.repeat()
         ds = ds.shuffle(512)
-        ds = batch_concat(ds, batch_size)
+        ds = batch_concat(ds, args.batch_size)
     ds = tfds.as_numpy(ds)
     for i in range(100): # clear screen
         print()
@@ -451,9 +451,9 @@ def eval_rollout(ds, simulator, num_steps, num_eval_steps=1, save_results=False,
 
 def train(simulator):
     i = 0
-    while os.path.isdir('train_log/run'+str(i)):
+    while os.path.isdir(f'{args.logdir}/run'+str(i)):
         i += 1
-    LOG_DIR = 'train_log/run'+str(i)+'/'
+    LOG_DIR = f'{args.logdir}/run'+str(i)+'/'
 
     writer = SummaryWriter(LOG_DIR)
 
@@ -464,7 +464,7 @@ def train(simulator):
     lr_new = lr_init
     optimizer = torch.optim.Adam(simulator.parameters(), lr=lr_init)
 
-    ds = prepare_data_from_tfds(data_path=os.path.join(args.data_dir, 'train.tfrecord'), batch_size=batch_size)
+    ds = prepare_data_from_tfds(data_path=os.path.join(args.data_dir, 'train.tfrecord'), batch_size=args.batch_size)
     # ds_eval = prepare_data_from_tfds(data_path='data/valid.tfrecord', is_rollout=True)
 
     step = 0
@@ -506,8 +506,8 @@ def train(simulator):
                 g['lr'] = lr_new
 
             step += 1
-            print(f'Training step: {step}/{training_steps}. Loss: {loss}.', end="\r",)
-            if step >= training_steps == 0:
+            print(f'Training step: {step}/{args.steps}. Loss: {loss}.', end="\r",)
+            if step >= args.steps == 0:
                 break
 
             # if step % eval_steps == 0:
@@ -528,19 +528,25 @@ def infer(simulator):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, default='train', choices=['train', 'infer'])
     parser.add_argument('--model_path', type=str, default=None)
     parser.add_argument('--reconnection_frequency', type=int, default=1)
     parser.add_argument('--data_dir', type=str, default='/home/shenranw/scratch-hgonen/datasets/WaterDropSample/')
+    mode_subparsers = parser.add_subparsers(dest='mode', help='train or infer')
+    
+    train_subparser = mode_subparsers.add_parser('train', help='Train the model.')
+    train_subparser.add_argument('--steps', type=int, default=int(2e7))
+    train_subparser.add_argument('--batch_size', type=int, default=2)
+    train_subparser.add_argument('--logdir', type=str, default='train_log')
+    
+    infer_subparser = mode_subparsers.add_parser('infer', help='Run inference using a trained model.')
+    infer_subparser.add_argument('--logdir', type=str, default='rollouts')
+    
     args = parser.parse_args()
     
-    os.makedirs('train_log', exist_ok=True)
-    os.makedirs('rollouts', exist_ok=True)
+    os.makedirs(args.logdir, exist_ok=True)
 
     INPUT_SEQUENCE_LENGTH = 6
-    batch_size = 2
     noise_std = 6.7e-4
-    training_steps = int(2e7)
     log_steps = 5
     eval_steps = 20
     save_steps = 100

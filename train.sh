@@ -18,4 +18,4 @@ export HF_HOME=/home/shenranw/scratch/tmp/transformers_cache
 export TRITON_CACHE_DIR=/home/shenranw/scratch/tmp/triton_cache
 
 cd /home/shenranw/GNS
-python train_or_infer.py
+python train_or_infer.py train --logdir /home/shenranw/scratch-hgonen/GNS/train_logs
