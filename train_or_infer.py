@@ -531,7 +531,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'infer'])
     parser.add_argument('--model_path', type=str, default=None)
     parser.add_argument('--reconnection_frequency', type=int, default=1)
-    parser.add_argument('--data_dir', type=str, default='~/scratch-hgonen/datasets/WaterDropSample/')
+    parser.add_argument('--data_dir', type=str, default='/home/shenranw/scratch-hgonen/datasets/WaterDropSample/')
     args = parser.parse_args()
     
     os.makedirs('train_log', exist_ok=True)
