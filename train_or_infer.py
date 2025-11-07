@@ -346,7 +346,6 @@ def prepare_data_from_tfds(data_path, is_rollout=False, batch_size=2):
     import tensorflow_datasets as tfds
     import reading_utils
     import tree
-    from tfrecord.torch.dataset import TFRecordDataset
     def prepare_inputs(tensor_dict):
         pos = tensor_dict['position']
         pos = tf.transpose(pos, perm=[1, 0, 2])
