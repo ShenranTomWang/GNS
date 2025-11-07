@@ -1,4 +1,4 @@
-import os
+import os, argparse
 import json
 import pickle
 import numpy as np
@@ -8,31 +8,6 @@ import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing, radius_graph
 
 from torch.utils.tensorboard import SummaryWriter
-os.makedirs('train_log', exist_ok=True)
-os.makedirs('rollouts', exist_ok=True)
-
-INPUT_SEQUENCE_LENGTH = 6
-batch_size = 2
-noise_std = 6.7e-4
-training_steps = int(2e7)
-log_steps = 5
-eval_steps = 20
-save_steps = 100
-model_path = None # 'model425000.pth'
-device = 'cuda'
-with open('data/metadata.json', 'rt') as f:
-    metadata = json.loads(f.read())
-num_steps = metadata['sequence_length'] - INPUT_SEQUENCE_LENGTH
-normalization_stats = {
-    'acceleration': {
-        'mean':torch.FloatTensor(metadata['acc_mean']).to(device), 
-        'std':torch.sqrt(torch.FloatTensor(metadata['acc_std'])**2 + noise_std**2).to(device),
-    }, 
-    'velocity': {
-        'mean':torch.FloatTensor(metadata['vel_mean']).to(device), 
-        'std':torch.sqrt(torch.FloatTensor(metadata['vel_std'])**2 + noise_std**2).to(device),
-    }, 
-}
 
 def build_mlp(
     input_size,
@@ -231,6 +206,7 @@ class Simulator(nn.Module):
         normalization_stats,
         num_particle_types,
         particle_type_embedding_size,
+        reconnection_frequency=1,
         device='cuda',
     ):
         super(Simulator, self).__init__()
@@ -238,6 +214,8 @@ class Simulator(nn.Module):
         self._connectivity_radius = connectivity_radius
         self._normalization_stats = normalization_stats
         self._num_particle_types = num_particle_types
+        self._reconnection_frequency = reconnection_frequency
+        self._reconnection_counter = 0
 
         self._particle_type_embedding = nn.Embedding(num_particle_types, particle_type_embedding_size) # (9, 16)
 
@@ -257,6 +235,7 @@ class Simulator(nn.Module):
         pass
 
     def _build_graph_from_raw(self, position_sequence, n_particles_per_example, particle_types):
+        self._reconnection_counter += 1
         n_total_points = position_sequence.shape[0]
         most_recent_position = position_sequence[:, -1] # (n_nodes, 2)
         velocity_sequence = time_diff(position_sequence)
@@ -330,7 +309,8 @@ class Simulator(nn.Module):
         return new_position
 
     def predict_positions(self, current_positions, n_particles_per_example, particle_types):
-        node_features, edge_index, e_features = self._build_graph_from_raw(current_positions, n_particles_per_example, particle_types)
+        if self._reconnection_counter & self._reconnection_frequency == 0:
+            node_features, edge_index, e_features = self._build_graph_from_raw(current_positions, n_particles_per_example, particle_types)
         predicted_normalized_acceleration = self._encode_process_decode(node_features, edge_index, e_features)
         next_position = self._decoder_postprocessor(predicted_normalized_acceleration, current_positions)
         return next_position
@@ -360,7 +340,7 @@ class Simulator(nn.Module):
     def load(self, path):
         self.load_state_dict(torch.load(path))
 
-def prepare_data_from_tfds(data_path='data/train.tfrecord', is_rollout=False, batch_size=2):
+def prepare_data_from_tfds(data_path, is_rollout=False, batch_size=2):
     import functools
     import tensorflow.compat.v1 as tf
     import tensorflow_datasets as tfds
@@ -484,7 +464,7 @@ def train(simulator):
     lr_new = lr_init
     optimizer = torch.optim.Adam(simulator.parameters(), lr=lr_init)
 
-    ds = prepare_data_from_tfds(batch_size=batch_size)
+    ds = prepare_data_from_tfds(data_path=os.path.join(args.data_dir, 'train.tfrecord'), batch_size=batch_size)
     # ds_eval = prepare_data_from_tfds(data_path='data/valid.tfrecord', is_rollout=True)
 
     step = 0
@@ -543,10 +523,41 @@ def train(simulator):
     simulator.save(LOG_DIR+'model.pth')
 
 def infer(simulator):
-    ds = prepare_data_from_tfds(data_path='data/valid.tfrecord', is_rollout=True)
+    ds = prepare_data_from_tfds(data_path=os.path.join(args.data_dir, 'valid.tfrecord'), is_rollout=True)
     eval_rollout(ds, simulator, num_steps=num_steps, save_results=True, device=device)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', type=str, default='train', choices=['train', 'infer'])
+    parser.add_argument('--model_path', type=str, default=None)
+    parser.add_argument('--reconnection_frequency', type=int, default=1)
+    parser.add_argument('--data_dir', type=str, default='~/scratch-hgonen/datasets/WaterDropSample/')
+    args = parser.parse_args()
+    
+    os.makedirs('train_log', exist_ok=True)
+    os.makedirs('rollouts', exist_ok=True)
+
+    INPUT_SEQUENCE_LENGTH = 6
+    batch_size = 2
+    noise_std = 6.7e-4
+    training_steps = int(2e7)
+    log_steps = 5
+    eval_steps = 20
+    save_steps = 100
+    device = 'cuda'
+    with open(os.path.join(args.data_dir, 'metadata.json'), 'rt') as f:
+        metadata = json.loads(f.read())
+    num_steps = metadata['sequence_length'] - INPUT_SEQUENCE_LENGTH
+    normalization_stats = {
+        'acceleration': {
+            'mean':torch.FloatTensor(metadata['acc_mean']).to(device), 
+            'std':torch.sqrt(torch.FloatTensor(metadata['acc_std'])**2 + noise_std**2).to(device),
+        }, 
+        'velocity': {
+            'mean':torch.FloatTensor(metadata['vel_mean']).to(device), 
+            'std':torch.sqrt(torch.FloatTensor(metadata['vel_std'])**2 + noise_std**2).to(device),
+        }, 
+    }
     simulator = Simulator(
         particle_dimension=2,
         node_in=30,
@@ -560,11 +571,14 @@ if __name__ == '__main__':
         normalization_stats=normalization_stats,
         num_particle_types=9,
         particle_type_embedding_size=16,
+        reconnection_frequency=args.reconnection_frequency,
         device=device,
     )
-    if model_path is not None:
-        simulator.load(model_path)
+    if args.model_path is not None:
+        simulator.load(args.model_path)
     if device == 'cuda':
         simulator.cuda()
-    train(simulator)
-    # infer(simulator)
+    if args.mode == 'train':
+        train(simulator)
+    else:
+        infer(simulator)
