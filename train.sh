@@ -19,7 +19,7 @@ export TRITON_CACHE_DIR=/home/shenranw/scratch/tmp/triton_cache
 
 cd /home/shenranw/GNS
 python train_or_infer.py \
-    train \
     --logdir /home/shenranw/scratch-hgonen/GNS/train_logs \
     --data_dir /home/shenranw/scratch-hgonen/datasets/GNS_dataset \
-    --model_path /home/shenranw/scratch-hgonen/models/GNS/WaterDropSample
+    --model_path /home/shenranw/scratch-hgonen/models/GNS/WaterDropSample \
+        train
