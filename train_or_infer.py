@@ -374,7 +374,7 @@ def prepare_data_from_tfds(data_path, is_rollout=False, batch_size=2):
         out_dict['is_trajectory'] = tf.constant([True], tf.bool)
         return out_dict, target_position
 
-    metadata = _read_metadata('data/')
+    metadata = _read_metadata(args.data_dir)
     ds = tf.data.TFRecordDataset([data_path])
     ds = ds.map(functools.partial(reading_utils.parse_serialized_simulation_example, metadata=metadata))
     if is_rollout:
