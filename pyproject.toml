@@ -1,0 +1,13 @@
+[project]
+name = "gns"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.3.5",
+    "tensorflow>=2.20.0",
+    "torch>=2.9.1",
+    "torch-geometric>=2.7.0",
+    "tree>=0.2.4",
+]
