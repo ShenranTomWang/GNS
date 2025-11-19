@@ -1,4 +1,4 @@
-import os, argparse
+import os, argparse, time
 import json
 import pickle
 import numpy as np
@@ -400,6 +400,7 @@ def eval_single_rollout(simulator, features, num_steps, device):
     
     current_positions = initial_positions
     predictions = []
+    timer_start = time.time()
     for step in range(num_steps):
         next_position = simulator.predict_positions(
             current_positions,
@@ -413,6 +414,8 @@ def eval_single_rollout(simulator, features, num_steps, device):
         next_position = torch.where(kinematic_mask, next_position_ground_truth, next_position)
         predictions.append(next_position)
         current_positions = torch.cat([current_positions[:, 1:], next_position[:, None, :]], dim=1)
+    timer_end = time.time()
+    rtf = (timer_end - timer_start) / num_steps
     predictions = torch.stack(predictions) # (time, n_nodes, 2)
     ground_truth_positions = ground_truth_positions.permute(1,0,2)
     loss = (predictions - ground_truth_positions) ** 2
@@ -422,10 +425,10 @@ def eval_single_rollout(simulator, features, num_steps, device):
         'ground_truth_rollout': ground_truth_positions.cpu().numpy(),
         'particle_types': features['particle_type'].cpu().numpy(),
     }
-    return output_dict, loss
+    return output_dict, loss, rtf
 
 def eval_rollout(ds, simulator, num_steps, num_eval_steps=1, save_results=False, device='cuda'):
-    eval_loss = []
+    eval_loss, rtfs = [], []
     i = 0
     simulator.eval()
     with torch.no_grad():
@@ -434,9 +437,10 @@ def eval_rollout(ds, simulator, num_steps, num_eval_steps=1, save_results=False,
             features['n_particles_per_example'] = torch.tensor(features['n_particles_per_example']).to(device)
             features['particle_type'] = torch.tensor(features['particle_type']).to(device)
             labels = torch.tensor(labels).to(device)
-            example_rollout, loss = eval_single_rollout(simulator, features, num_steps, device)
+            example_rollout, loss, rtf = eval_single_rollout(simulator, features, num_steps, device)
             example_rollout['metadata'] = metadata
             eval_loss.append(loss)
+            rtfs.append(rtf)
             if save_results:
                 example_rollout['metadata'] = metadata
                 filename = f'rollout_{example_i}.pkl'
@@ -447,7 +451,7 @@ def eval_rollout(ds, simulator, num_steps, num_eval_steps=1, save_results=False,
             if i >= num_eval_steps:
                 break
     simulator.train()
-    return torch.stack(eval_loss).mean(0)
+    return torch.stack(eval_loss).mean(), np.mean(rtfs)
 
 def train(simulator):
     i = 0
@@ -524,7 +528,9 @@ def train(simulator):
 
 def infer(simulator):
     ds = prepare_data_from_tfds(data_path=os.path.join(args.data_dir, 'valid.tfrecord'), is_rollout=True)
-    eval_rollout(ds, simulator, num_steps=num_steps, save_results=True, device=device)
+    loss, rtf = eval_rollout(ds, simulator, num_steps=num_steps, save_results=True, device=device)
+    print('Eval loss:', loss)
+    print('RTF:', rtf)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
