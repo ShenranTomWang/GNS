@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "matplotlib",
     "numpy>=2.3.5",
     "tensorflow>=2.20.0",
     "tensorflow-datasets>=4.9.9",

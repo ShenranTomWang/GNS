@@ -15,3 +15,7 @@ python train_or_infer.py \
     infer \
         --model_path /ubc/cs/home/s/shenranw/scratch/GNS/train_logs/run6/model.pth \
         --logdir /ubc/cs/home/s/shenranw/scratch/GNS/rollouts
+
+python render_rollout.py \
+    --rollout_path \
+    /ubc/cs/home/s/shenranw/scratch/GNS/rollouts/rollout_0.pkl

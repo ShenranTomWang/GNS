@@ -309,9 +309,10 @@ class Simulator(nn.Module):
         return new_position
 
     def predict_positions(self, current_positions, n_particles_per_example, particle_types):
-        if self._reconnection_counter & self._reconnection_frequency == 0:
-            node_features, edge_index, e_features = self._build_graph_from_raw(current_positions, n_particles_per_example, particle_types)
-        predicted_normalized_acceleration = self._encode_process_decode(node_features, edge_index, e_features)
+        if self._reconnection_counter % self._reconnection_frequency == 0:
+            self.node_features, self.edge_index, self.e_features = self._build_graph_from_raw(current_positions, n_particles_per_example, particle_types)
+        self._reconnection_counter += 1
+        predicted_normalized_acceleration = self._encode_process_decode(self.node_features, self.edge_index, self.e_features)
         next_position = self._decoder_postprocessor(predicted_normalized_acceleration, current_positions)
         return next_position
 
@@ -439,7 +440,7 @@ def eval_rollout(ds, simulator, num_steps, num_eval_steps=1, save_results=False,
             if save_results:
                 example_rollout['metadata'] = metadata
                 filename = f'rollout_{example_i}.pkl'
-                filename = os.path.join('rollouts/', filename)
+                filename = os.path.join(args.logdir, filename)
                 with open(filename, 'wb') as f:
                     pickle.dump(example_rollout, f)
             i += 1
