@@ -28,7 +28,7 @@ It may require installing Tkinter with `sudo apt-get install python3.7-tk`.
 
 import pickle
 
-import argparse
+import argparse, os
 
 from matplotlib import animation
 import matplotlib.pyplot as plt
@@ -83,9 +83,15 @@ def main():
                 outputs.append(line)
         return outputs
 
-    unused_animation = animation.FuncAnimation(
+    generated_animation = animation.FuncAnimation(
         fig, update,
-        frames=np.arange(0, num_steps, args.step_stride), interval=10)
+        frames=np.arange(0, num_steps, args.step_stride), 
+        interval=10
+    )
+    writer = animation.PillowWriter(fps=24)
+    out_path = os.path.join(os.path.dirname(args.rollout_path), 'rollout.gif')
+    generated_animation.save(out_path, writer=writer)
+    print(f"Saved animation to {out_path}")
     plt.show(block=args.block_on_show)
 
 
@@ -96,3 +102,4 @@ if __name__ == "__main__":
     parser.add_argument("--block_on_show", type=bool, default=True, help="For test purposes.")
 
     args = parser.parse_args()
+    main()
