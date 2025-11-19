@@ -527,9 +527,8 @@ def infer(simulator):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', type=str, default=None)
     parser.add_argument('--reconnection_frequency', type=int, default=1)
-    parser.add_argument('--data_dir', type=str, default='/home/shenranw/scratch-hgonen/datasets/WaterDropSample/')
+    parser.add_argument('--data_dir', type=str, default='/ubc/cs/home/s/shenranw/scratch/datasets/WaterDropSample/')
     mode_subparsers = parser.add_subparsers(dest='mode', help='train or infer')
     
     train_subparser = mode_subparsers.add_parser('train', help='Train the model.')
@@ -538,6 +537,7 @@ if __name__ == '__main__':
     train_subparser.add_argument('--logdir', type=str, default='train_log')
     
     infer_subparser = mode_subparsers.add_parser('infer', help='Run inference using a trained model.')
+    infer_subparser.add_argument('--model_path', type=str, default=None)
     infer_subparser.add_argument('--logdir', type=str, default='rollouts')
     
     args = parser.parse_args()
