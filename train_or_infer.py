@@ -586,7 +586,7 @@ if __name__ == '__main__':
         reconnection_frequency=args.reconnection_frequency,
         device=device,
     )
-    if args.model_path is not None:
+    if hasattr(args, 'model_path') and args.model_path is not None:
         simulator.load(args.model_path)
     if device == 'cuda':
         simulator.cuda()
