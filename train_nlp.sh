@@ -5,7 +5,7 @@
 #SBATCH --time=12:0:0
 #SBATCH --partition=nlpgpo
 
-source /home/shenranw/.bashrc
+source /ubc/cs/home/s/shenranw/.bashrc
 cd /ubc/cs/home/s/shenranw/GNS
 source ../scratch/envs/GNS/.venv/bin/activate
 
