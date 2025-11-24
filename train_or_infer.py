@@ -511,7 +511,7 @@ def train(simulator):
 
             step += 1
             print(f'Training step: {step}/{args.steps}. Loss: {loss}.', end="\r",)
-            if step >= args.steps == 0:
+            if step >= args.steps:
                 break
 
             # if step % eval_steps == 0:
