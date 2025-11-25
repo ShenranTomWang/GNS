@@ -14,5 +14,5 @@ source ../scratch/envs/GNS/.venv/bin/activate
 python train_or_infer.py \
     --data_dir /ubc/cs/home/s/shenranw/scratch/datasets/WaterDropSample \
     train \
-        --logdir /ubc/cs/home/s/shenranw/scratch/GNS/train_logs \
+        --logdir /ubc/cs/home/s/shenranw/scratch/GNS/train_logs/rf=1 \
         --steps 700000
