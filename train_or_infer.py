@@ -451,6 +451,7 @@ def eval_rollout(ds, simulator, num_steps, num_eval_steps=1, save_results=False,
             if i >= num_eval_steps:
                 break
     simulator.train()
+    rtfs = rtfs[1:]
     return torch.stack(eval_loss).mean(), np.mean(rtfs)
 
 def train(simulator):

@@ -12,7 +12,7 @@ source ../scratch/envs/GNS/.venv/bin/activate
 # bash ./download_dataset.sh WaterDropSample /ubc/cs/home/s/shenranw/scratch/datasets/
 
 python train_or_infer.py \
-    --data_dir /ubc/cs/home/s/shenranw/scratch/datasets/WaterDropSample \
+    --data_dir /ubc/cs/home/s/shenranw/scratch/datasets/WaterRamps \
     train \
-        --logdir /ubc/cs/home/s/shenranw/scratch/GNS/train_logs/rf=1 \
+        --logdir /ubc/cs/home/s/shenranw/scratch/GNS/train_logs/WaterRamps/rf=1 \
         --steps 700000
