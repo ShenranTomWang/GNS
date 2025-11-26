@@ -400,6 +400,22 @@ def eval_single_rollout(simulator, features, num_steps, device):
     
     current_positions = initial_positions
     predictions = []
+    for step in range(num_steps):
+        next_position = simulator.predict_positions(
+            current_positions,
+            n_particles_per_example=features['n_particles_per_example'],
+            particle_types=features['particle_type'],
+        ) # (n_nodes, 2)
+        # Update kinematic particles from prescribed trajectory.
+        kinematic_mask = (features['particle_type'] == 3).clone().detach().to(device)
+        next_position_ground_truth = ground_truth_positions[:, step]
+        kinematic_mask = kinematic_mask.bool()[:, None].expand(-1, 2)
+        next_position = torch.where(kinematic_mask, next_position_ground_truth, next_position)
+        predictions.append(next_position)
+        current_positions = torch.cat([current_positions[:, 1:], next_position[:, None, :]], dim=1)
+    
+    current_positions = initial_positions
+    predictions = []
     timer_start = time.time()
     for step in range(num_steps):
         next_position = simulator.predict_positions(
@@ -416,6 +432,7 @@ def eval_single_rollout(simulator, features, num_steps, device):
         current_positions = torch.cat([current_positions[:, 1:], next_position[:, None, :]], dim=1)
     timer_end = time.time()
     rtf = (timer_end - timer_start) / num_steps
+    print("steps: " + str(num_steps))
     predictions = torch.stack(predictions) # (time, n_nodes, 2)
     ground_truth_positions = ground_truth_positions.permute(1,0,2)
     loss = (predictions - ground_truth_positions) ** 2
@@ -451,7 +468,6 @@ def eval_rollout(ds, simulator, num_steps, num_eval_steps=1, save_results=False,
             if i >= num_eval_steps:
                 break
     simulator.train()
-    rtfs = rtfs[1:]
     return torch.stack(eval_loss).mean(), np.mean(rtfs)
 
 def train(simulator):
