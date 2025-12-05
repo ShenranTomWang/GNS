@@ -460,7 +460,7 @@ def eval_rollout(ds, simulator, num_steps, num_eval_steps=1, save_results=False,
             rtfs.append(rtf)
             if save_results:
                 example_rollout['metadata'] = metadata
-                filename = f'rollout_{example_i}.pkl'
+                filename = f'rollout_{args.reconnection_frequency}.pkl'
                 filename = os.path.join(args.logdir, filename)
                 with open(filename, 'wb') as f:
                     pickle.dump(example_rollout, f)

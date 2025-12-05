@@ -22,4 +22,4 @@ python train_or_infer.py \
 
 python render_rollout.py \
     --rollout_path \
-    /ubc/cs/home/s/shenranw/scratch/GNS/rf=${RF}/rollouts/rollout_0.pkl
+    /ubc/cs/home/s/shenranw/scratch/GNS/rf=${RF}/rollouts/rollout_${RECONNECTION_FREQUENCY}.pkl
